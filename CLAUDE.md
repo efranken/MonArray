@@ -4,18 +4,60 @@ OpenSCAD models for an arched, multi-driver speaker/BMR enclosure and its
 trim piece. Fusion 360 was the original source (see `ExportedParameters.csv`
 references in comments); this repo re-derives the geometry parametrically.
 
+## The model being generated
+
+Physically, this is a horizontal line-array speaker bar: a single long,
+gently arched enclosure holding `num_holes` (currently 10) 2" Tectonic
+BMR drivers in a row along its concave arc face. `divider_after_hole`
+splits the hollow interior into separate sealed acoustic chambers (e.g.
+outer banks for music, a center pair for a work computer) so each
+driver/group has its own airspace. See `README.md` for the plain-English
+"what is this" version.
+
+The three printed/assembled parts:
+- **`box.scad`** — the arched bar itself. Hollow-shelled, BMR cutouts
+  through the arc face, internal dividers between chambers, mounting
+  bosses behind each driver hole (for `trim.scad` to clip onto), and an
+  **open back** (no rear wall) so the chambers are accessible during
+  assembly/wiring, ringed by a perimeter lip and M3 heat-set insert holes.
+- **`backpanel.scad`** — the flat cover that bolts over that open back
+  into the M3 inserts, closing the chambers back up. It also carries the
+  wire-routing geometry: one straight internal channel per cable (2 per
+  chamber), tightly stacked in a single column, each entering from the
+  box-facing (lip) side where its chamber is and running to one shared
+  **hub** — a through-hole sized to intersect the whole channel stack —
+  where all the cable pairs are gathered and pulled out through the
+  panel's outer face.
+- **`trim.scad`** — a stepped cap that plugs into a BMR bore from
+  outside and clips onto the box's mounting bosses, capping each driver
+  hole from the front.
+
+`backpanel_section.scad` is not a fourth physical part — it's
+`backpanel.scad` sliced through half its thickness (right at the depth
+the channels sit) purely so the channel/hub layout can be inspected
+visually; see `images/three_pieces.png` (embedded in `README.md`), which
+was generated from it.
+
 ## Files
 
-- `params.scad` — every parameter for both parts, in three blocks:
-  Shared (bore/boss geometry used by both), Box-only, Trim-only. Both
-  `box.scad` and `trim.scad` do `include <params.scad>` (not `use`, since
-  `include` also pulls in plain variables, not just modules/functions).
-  **When adding a parameter, put it here, in the right block — never
-  hardcode a value directly in box.scad/trim.scad.**
+- `params.scad` — every parameter for all pieces, in four blocks:
+  Shared (bore/boss geometry used by box + trim), Box-only, Trim-only,
+  Backpanel-only. `box.scad`/`trim.scad`/`backpanel.scad` all
+  `include <params.scad>` (not `use`, since `include` also pulls in plain
+  variables, not just modules/functions). **When adding a parameter, put
+  it here, in the right block — never hardcode a value directly in one
+  of the model files.**
 - `box.scad` — the arched hollow bar: concave-arc profile, extruded,
   shelled hollow, with BMR cutouts on the arc face, an open back (no rear
   wall) with a perimeter lip, M3 heat-set insert holes around that rim,
   optional internal dividers, and mounting bosses on the arc-side facets.
+- `backpanel.scad` — flat cover for the box's open back: mounting holes
+  matching the box's M3 inserts (same `rect_pattern`/`rim_mid` derivation,
+  duplicated from `box.scad` since `include`/`use` won't share derived
+  geometry cleanly across files), plus the internal wire channels and
+  pull-through hub described above.
+- `backpanel_section.scad` — inspection-only half-section of
+  `backpanel.scad` (see above); `use`s it rather than duplicating it.
 - `trim.scad` — a stepped cap that plugs into a BMR bore from outside and
   clips onto the box's mounting bosses.
 
