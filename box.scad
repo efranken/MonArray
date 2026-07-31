@@ -72,6 +72,22 @@ module profile_2d() {
 function hole_t(i) = -hole_span / 2 + (num_holes == 1 ? 0
                         : hole_span * i / (num_holes - 1));
 
+// ---------- Accessors for box_print.scad ----------
+// box_print.scad pulls the box in with `use <>` (so the model isn't
+// instantiated twice), which exports functions/modules but not top-level
+// variables -- these accessors expose the derived values it needs.
+function box_Xe() = Xe;
+function box_hole_x(i) = R * sin(hole_t(i));   // chord x of hole i (0-indexed)
+// outer arc-face depth (final-part z) at chord position x
+function box_face_y(x) = Yc - sqrt(R * R - x * x);
+// print-cut x for the gap after hole h (1-indexed): the gap midpoint,
+// unless that gap carries a divider, in which case the cut lands at the
+// divider's +x face so one segment keeps the divider as a mating bulkhead
+function box_gap_cut_x(h) =
+    let (xm = R * sin((hole_t(h - 1) + hole_t(h)) / 2))
+    len([for (d = divider_after_hole) if (d == h) d]) > 0
+        ? xm + divider_thickness / 2 : xm;
+
 // ---------- Shared per-hole placement ----------
 // Every arc-face feature (the BMR cutout, its mounting bosses, and the
 // boss screw holes) sits at the same local frame per hole: z runs along
@@ -211,9 +227,14 @@ module back_lip() {
     inset = Xi - back_lip_width;
     z_lo  = wall_width + back_lip_width;
     z_hi  = height - wall_width - back_lip_width;
+    eps   = 0.1;  // outer boundary is unioned in exactly where the
+                  // surrounding end-wall/cap-wall material begins (x =
+                  // +-Xi, z = wall_width/height-wall_width); overlapping
+                  // slightly into that (already-solid) material on all 4
+                  // sides avoids a bare coincident-face union there
     difference() {
-        translate([-Xi, 0, wall_width])
-            cube([2 * Xi, back_lip_depth, height - 2 * wall_width]);
+        translate([-(Xi + eps), 0, wall_width - eps])
+            cube([2 * (Xi + eps), back_lip_depth, height - 2 * wall_width + 2 * eps]);
         translate([-inset, -1, z_lo])
             cube([2 * inset, back_lip_depth + 2, z_hi - z_lo]);
     }
