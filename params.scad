@@ -17,7 +17,7 @@ $fn          = 30;
 arc_length   = 805.45;  // length along the arc face, mm
 arc_depth    = 54.78;   // sagitta / rise of the arc, mm
 baffle_space = 1;       // thickness of trim over bmrs
-bmr_id       = 44.8;    // cutout circle inner diameter, mm
+bmr_id       = 43.8;    // cutout circle inner diameter, mm
 end_space    = 30;      // clearance: box end -> nearest hole edge (along arc), mm
 height       = 70;      // extrusion height, mm
 wall_width   = 4;       // shell wall thickness, mm
@@ -30,19 +30,19 @@ divider_after_hole = [4, 5, 6];  // 1-indexed: wall placed between this hole and
 divider_thickness  = wall_width; // thickness of each dividing wall, mm
 boss_hole_depth    = boss_h + 2; // blind: stops 2 mm short of the outer face
 back_lip_depth     = 5;          // how far the lip reaches into the cavity from the open back, mm
-back_lip_width     = 4;          // width of the lip shelf, mm
+back_lip_width     = 5;          // width of the lip shelf, mm
 m3_ins_od          = 4.2;        // M3 heat-set insert diameter, mm
 m3_ins_depth       = 4;          // insert hole depth from the exposed rear face, mm
 num_bolts          = 12;         // insert holes, equally spaced around the rear rim
 bmr_fn             = 96;         // circle resolution for the BMR cutout only (global $fn stays low for everything else)
 
 /* [Trim-only parameters] */
-trim_id          = 50;                  // center bore diameter, mm
+trim_id          = 47;                  // center bore diameter, mm
 trim_id_chamfer  = 2;                   // chamfer depth on the center bore's inner edge, mm
 trim_step_od     = bmr_od - 0.5;        // plug OD: 0.5 mm total clearance in the bore
 trim_step_depth  = boss_h + 2;          // plug length: boss height + 2 mm
 boss_hole        = boss_hole_d;         // == boss_id: screw clearance hole diameter
-flange_depth     = 2;                   // flange (cap) thickness, mm
+flange_depth     = 3;                   // flange (cap) thickness, mm
 total_depth      = flange_depth + trim_step_depth;  // overall trim height, mm
 
 /* [Backpanel-only parameters] */
@@ -71,13 +71,13 @@ channel_mid_offset      = 10;    // inner channel pair position, mm from center
 // extends inward to the punch-down terminal. Standard 14.5x16.1mm
 // keystone opening (Leviton/Legrand/ICC-style) -- adjust to match a
 // specific jack's datasheet if needed.
-ks_cutout_w         = 16.1;  // standard keystone cutout width, mm
-ks_cutout_h         = 14.5;  // standard keystone cutout height, mm
+ks_cutout_w         = 20.5;  // standard keystone cutout width, mm
+ks_cutout_h         = 22.5;  // standard keystone cutout height, mm
 ks_cutout_clearance = 0.3;   // print clearance added to the cutout so the jack slides through, mm
 ks_body_w           = 16.3;  // body/tang-flare cavity width behind the wall, mm
 ks_body_h           = 14.8;  // body/tang-flare cavity height behind the wall, mm
 ks_jack_len         = 36;    // overall length, panel's outer face to rear of punch-down block, mm
-ks_wall             = 4;     // structural wall thickness around the housing, mm
+ks_wall             = 6;     // structural wall thickness around the housing, mm
 ks_x_frac           = 1 / 3; // keystone housing (and channel gathering point) position along the panel length, fraction from the left edge
 ks_y_offset         = 0;     // housing center y, relative to mid-height (mm; change to reposition)
 

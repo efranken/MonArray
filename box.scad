@@ -153,8 +153,13 @@ module outer_cap_open_2d() {
                 // vertex itself uncovered on the arc side, so offset()
                 // still insets a sliver there -- patch with a disc
                 // centered on each true corner, covering every direction.
-                translate(rear_segments[0][0]) circle(r = 3 * wall_width);
-                translate(rear_segments[len(rear_segments) - 1][1]) circle(r = 3 * wall_width);
+                // Radius must be exactly wall_width: it cancels to a single
+                // protected point after the -wall_width inset below, patching
+                // just the vertex. A bigger radius (this was 3x) leaves a
+                // same-radius-minus-wall_width zone with NO wall at all --
+                // found via a real end wall thinning near the box corners.
+                translate(rear_segments[0][0]) circle(r = wall_width);
+                translate(rear_segments[len(rear_segments) - 1][1]) circle(r = wall_width);
             }
         outer_cap_2d();
     }
@@ -230,11 +235,21 @@ module rail_band(z0, z_h) {
                     cube([norm(seg[1] - seg[0]), back_lip_depth + eps, z_h]);
 }
 
+// Starts at wall_width in from the true corner (the shell's own edge
+// there, not the corner itself) and adds back_lip_width beyond it --
+// mirrors rail_band's z0/z_h split, so the cap stacks onto the plain
+// shell wall instead of just overlapping/replacing part of it. Matters
+// because box_rim_bolt_frame() centers rim bolts assuming a combined
+// wall_width + back_lip_width band all the way around; starting the cap
+// at the true edge (0) instead of wall_width left only back_lip_width of
+// real material there, so a rim bolt near a corner had roughly half its
+// hole poking past the cap into open cavity.
 module end_cap(i, at_start) {
     eps = 0.1;
     len = norm(rear_segments[i][1] - rear_segments[i][0]);
+    x0 = at_start ? wall_width : len - wall_width - back_lip_width;
     segment_frame(i)
-        translate([at_start ? 0 : len - back_lip_width, 0, wall_width])
+        translate([x0, 0, wall_width])
             cube([back_lip_width, back_lip_depth + eps, height - 2 * wall_width]);
 }
 
