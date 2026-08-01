@@ -1,64 +1,15 @@
 // ============================================================
-// Cover for the box's open back, in 3 pieces to match its "\_/" bend.
-// Built as ONE flat assembly first -- body, bolt holes, keystone mount,
-// wire channels, all in the ORIGINAL flat (x, y=height, z=depth) frame
-// -- then cut into 3 strips and folded: the two end strips rotate about
-// their seam with the flat center piece, by the angle the box's own
-// rear_segments have there; the center strip is unrotated (a 0-degree
-// fold is a no-op). This keeps the keystone/wire-channel geometry
-// (already complex, with its own fit asserts) entirely unchanged --
-// only the flat assembly's overall shape and the bolt-hole positions
-// need to account for the bend, not every feature individually.
-// Per piece, z=0 is that piece's own outer face; z increases toward the
-// box (that's local to each piece post-fold, not global).
+// Flat cover for the box's open back: M3 bolt holes (shared rim_bolt_pts),
+// a recessed RJ45 keystone mount, and 8 wire channels gathering in a
+// riser below it. z=0 is the outer face; z increases toward the box.
 // ============================================================
 
-include <common.scad>
-use <box.scad>
+include <smp-common.scad>
 
-seam_gap = 0.5;   // total gap at each internal seam, split evenly between the two adjoining pieces
-n_pieces = box_num_rear_segments();
-
-// The break points (shared corners between adjoining rear_segments) and
-// each end segment's true 3D length, vs. its flat x-span -- the flat
-// assembly needs to be LONGER than 2*Xe by that difference, so that
-// after folding, the end pieces still reach the box's true corners
-// instead of falling short (a segment's 3D length is always >= its own
-// x-span, once it's not perfectly flat).
-break_lo = box_rear_segment(0)[1][0];
-break_hi = box_rear_segment(n_pieces - 1)[0][0];
-len0     = norm(box_rear_segment(0)[1] - box_rear_segment(0)[0]);
-len_last = norm(box_rear_segment(n_pieces - 1)[1] - box_rear_segment(n_pieces - 1)[0]);
-extra_left  = len0 - (break_lo + Xe);
-extra_right = len_last - (Xe - break_hi);
-
-// x in the flat (pre-fold) frame for a point at distance local_x along
-// rear_segments[seg_index], measured from that segment's own [0] point
-// -- see box_rim_bolt_frame()'s seg_index/local_x. Segment 0's hinge is
-// its FAR end (local_x = len0, at break_lo); the last segment's hinge is
-// its NEAR end (local_x = 0, at break_hi) -- flat x runs outward from
-// the hinge in both cases, away from the flat center.
-function flat_x(seg_index, local_x) =
-    seg_index == 0 ? break_lo - len0 + local_x :
-    seg_index == n_pieces - 1 ? break_hi + local_x :
-    box_rear_segment(seg_index)[0][0] + local_x;
-
-// Rotates children() about the line x=hinge_x, z=hinge_z (y, the height
-// axis, unaffected) by ang -- verified algebraically (not just
-// empirically) against box_rear_segment(0)/(n-1): folding the flat
-// piece's far corner about its own hinge by that segment's own
-// box_rear_angle() lands it exactly on the box's true corner.
-module rotate_about_x(hinge_x, hinge_z, ang) {
-    translate([hinge_x, 0, hinge_z])
-        rotate([0, -ang, 0])
-            translate([-hinge_x, 0, -hinge_z])
-                children();
-}
-
-// ---------- Flat body + bolt holes ----------
-module flat_panel_body() {
-    translate([-Xe - extra_left, 0, 0])
-        cube([2 * Xe + extra_left + extra_right, height, panel_thick]);
+// ---------- Panel body + bolt holes ----------
+module panel_body() {
+    translate([-Xe, 0, 0])
+        cube([2 * Xe, height, panel_thick]);
 }
 
 // counterbore from the outer face + through clearance bore; the
@@ -72,10 +23,9 @@ module panel_hole() {
 }
 
 module panel_holes() {
-    for (i = [0:box_rim_bolt_count() - 1])
-        let (f = box_rim_bolt_frame(i))   // f = [x,y,z,angle_deg,seg_index,local_x]
-            translate([flat_x(f[4], f[5]), f[2], 0])
-                panel_hole();
+    for (p = rim_bolt_pts())
+        translate([p[0], p[1] + height / 2, 0])
+            panel_hole();
 }
 
 // ---------- Keystone jack mount ----------
@@ -204,13 +154,6 @@ assert(transit_y(n_heights - 1) + channel_bend_r
        + channel_exit_r * sin(acos(1 - (panel_thick / 2) / channel_exit_r))
        < height - (wall_width + back_lip_width),
        "Top channel entry hole lands outside the back-lip window");
-// the flat-assembly extension for folding must not eat into channel/
-// keystone territory -- it shouldn't, since extra_left/right are only
-// ever needed near the very tips, but confirm rather than assume
-assert(-Xe - extra_left < channel_x_groups[0] - channel_bend_r,
-       "Left flat-assembly extension overlaps the outer channel pair");
-assert(Xe + extra_right > channel_x_groups[3] + channel_bend_r,
-       "Right flat-assembly extension doesn't clear the outer channel pair");
 
 // ---------- Accessors for backpanel_print.scad ----------
 function bp_Xe() = Xe;
@@ -226,10 +169,10 @@ function bp_keystone_x() = ks_x;
 function bp_keystone_halfw() = max(ks_outer_w, riser_od) / 2;
 
 // ---------- Assemble ----------
-module flat_full_assembly() {
+module back_panel() {
     difference() {
         union() {
-            flat_panel_body();
+            panel_body();
             keystone_housing();
             channel_riser_housing();
         }
@@ -241,44 +184,6 @@ module flat_full_assembly() {
             keystone_body_cavity();
         }
     }
-}
-
-// x-only clip: y/z margins just need to clear every feature (the
-// keystone housing and channel riser reach z = ks_jack_len, well past
-// panel_thick), not just the flat panel body itself.
-module clip_x(x_lo, x_hi) {
-    z_span = max(panel_thick, ks_jack_len) + 20;
-    intersection() {
-        children();
-        translate([x_lo, -10, -10])
-            cube([x_hi - x_lo, height + 20, z_span]);
-    }
-}
-
-// margin so two flat cuts at different fold angles still clear each
-// other by seam_gap everywhere through panel_thick, not just at one
-// face -- see box.scad/CLAUDE.md for the same tradeoff worked out
-// for back_lip(); negligible at the near-flat default.
-function seam_margin(i, j) = panel_thick * abs(tan(box_rear_angle(j) - box_rear_angle(i)));
-
-module panel_piece(i) {
-    trim_lo = i == 0 ? 0 : seam_gap / 2 + seam_margin(i - 1, i);
-    trim_hi = i == n_pieces - 1 ? 0 : seam_gap / 2 + seam_margin(i, i + 1);
-    x_lo = (i == 0 ? -Xe - extra_left : box_rear_segment(i)[0][0]) + trim_lo;
-    x_hi = (i == n_pieces - 1 ? Xe + extra_right : box_rear_segment(i)[1][0]) - trim_hi;
-    if (i == 0)
-        rotate_about_x(break_lo, 0, box_rear_angle(0))
-            clip_x(x_lo, x_hi) flat_full_assembly();
-    else if (i == n_pieces - 1)
-        rotate_about_x(break_hi, 0, box_rear_angle(n_pieces - 1))
-            clip_x(x_lo, x_hi) flat_full_assembly();
-    else
-        clip_x(x_lo, x_hi) flat_full_assembly();
-}
-
-module back_panel() {
-    for (i = [0:n_pieces - 1])
-        panel_piece(i);
 }
 
 back_panel();

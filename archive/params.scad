@@ -1,5 +1,5 @@
 // ============================================================
-// Shared parameters for all .scad files.
+// Shared parameters for all smp-*.scad files.
 // ============================================================
 
 /* [Shared: bore / mounting-boss geometry] */
@@ -22,9 +22,8 @@ end_space    = 30;      // clearance: box end -> nearest hole edge (along arc), 
 height       = 70;      // extrusion height, mm
 wall_width   = 4;       // shell wall thickness, mm
 bar_depth    = 63;      // box depth at mid-span (thinnest point), mm
-rear_end_depth = 117.8;    // box depth (front-to-back) at the left/right ends, mm -- see profile_2d()
-                          // 117.78 makes the entire rear one flat plane (no "\_/" bend at all)
-                          // -- recompute if arc_length/arc_depth/bar_depth change
+box_chamfer_leg   = 15; // bottom/end chamfer: leg length along the end edge (height axis), mm
+box_chamfer_angle = 30; // bottom/end chamfer: facet angle measured from the bottom-face plane, deg
 num_holes    = 10;      // holes are spaced equidistantly to fill the span
 divider_after_hole = [4, 5, 6];  // 1-indexed: wall placed between this hole and the next
 divider_thickness  = wall_width; // thickness of each dividing wall, mm

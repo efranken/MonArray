@@ -14,115 +14,118 @@ outer banks for music, a center pair for a work computer) so each
 driver/group has its own airspace. See `README.md` for the plain-English
 "what is this" version.
 
-The three printed/assembled parts:
-- **`box.scad`** — the arched bar itself. Hollow-shelled, BMR cutouts
+The three printed/assembled parts (live models: `box.scad`,
+`backpanel.scad`, `trim.scad`):
+- **the box** — the arched bar itself. Hollow-shelled, BMR cutouts
   through the arc face, internal dividers between chambers, mounting
-  bosses behind each driver hole (for `trim.scad` to clip onto), and an
+  bosses behind each driver hole (for the trim caps to clip onto), and an
   **open back** (no rear wall) so the chambers are accessible during
   assembly/wiring, ringed by a perimeter lip and M3 heat-set insert holes.
-- **`backpanel.scad`** — the flat cover that bolts over that open back
-  into the M3 inserts, closing the chambers back up. All 8 speaker wires
-  (2 per chamber) run through straight internal channels, tightly stacked
-  in a single column, into a round riser tube standing next to a
-  **keystone jack mount**, used as a cheap 8-position punch-down block.
-  The cutout goes straight through the panel itself (`panel_thick`
-  doubles as the keystone-rated mounting wall) so the jack — and a patch
-  cable plugged into it — is reachable from the panel's *exterior* face;
-  the housing extends inward from there into the box for the rest of the
-  jack's length, ending at the punch-down terminal, which stays buried
-  (wired once during assembly, same as a normal keystone install).
-  Earlier revisions had this backwards (cutout buried at the deep end, no
-  path to the exterior at all — caught because nothing could ever plug
-  into it); don't reintroduce that. Also earlier, the wire channels fed
-  straight into the jack's own body cavity — which turned out to be
-  unusable, since that cavity is the jack's friction-fit footprint with
-  no free space once it's actually inserted; the riser tube exists
-  specifically to keep the wire path and the jack's body from competing
-  for the same volume. The intended seal strategy (not yet modeled in
-  geometry): dab silicone at each channel's chamber-side terminus after
-  wiring to keep the 4 chambers acoustically isolated, plus a bead around
-  the keystone recess's own opening.
-- **`trim.scad`** — a stepped cap that plugs into a BMR bore from
+- **the backpanel** — flat cover bolted over the open back into the M3
+  inserts. All 8 speaker wires (2/chamber) run through stacked internal
+  channels into a riser tube beside a **keystone jack mount** (used as an
+  8-position punch-down block). The cutout goes through the panel itself
+  so the jack is reachable from the *exterior* face; the housing extends
+  inward to the punch-down terminal. Don't reintroduce two past bugs:
+  (1) cutout facing into the box instead of out (nothing could plug in),
+  (2) wire channels feeding into the jack's own friction-fit cavity
+  instead of the separate riser (no free space once the jack's inserted).
+  Seal strategy (not yet modeled): silicone at each channel's
+  chamber-side end, plus a bead around the keystone recess.
+- **the trim** — a stepped cap that plugs into a BMR bore from
   outside and clips onto the box's mounting bosses, capping each driver
   hole from the front. Its flange is a rounded rectangle (hull of the 4
   boss circles) rather than a plain disc, so it hugs the boss layout
   instead of needing its own diameter parameter.
 
-`backpanel_section.scad` is not a fourth physical part — it's
-`backpanel.scad` sliced through half its thickness (right at the depth
-the channels sit) purely so the channel/keystone layout can be inspected
-visually; see `images/three_pieces.png` (embedded in `README.md`), which
-was generated from it (predates this rework, so it still shows the old
-hub-based design).
+## Folder structure
 
-## Files
+```
+params.scad             all user-tunable parameters (single source of truth)
+common.scad             shared derived geometry + helpers (includes params.scad)
+box.scad                } the LIVE models -- each includes common.scad
+backpanel.scad          }
+trim.scad               }
+box-split-{1,2,3}.scad       box.scad cut into 3 printable pieces, one file
+                              per piece (use <box.scad>) -- see box.scad's
+                              box_outer_wall_mid_x()
+backpanel-split-{1,2,3}.scad backpanel.scad cut into 3 folded pieces, one file
+                              per piece (use <backpanel.scad>) -- see
+                              backpanel.scad's panel_piece()
+archive/              retired originals: box/backpanel/trim.scad (the
+                      pre-simplification versions the current files were
+                      verified identical against), box_print.scad,
+                      backpanel_print.scad, backpanel_section.scad, plus a
+                      later smp-*.scad snapshot (pre "/-\" rear shape)
+scripts/render.sh     PNG render wrapper (needs openscad on PATH; this
+                      machine doesn't have it on PATH, so call the nightly
+                      build's openscad.com directly instead -- see
+                      "Rendering / verification" below)
+stl/                  exported STLs (snapshots, not regenerated automatically)
+images/               renders embedded in README.md
+```
 
-- `params.scad` — every parameter for all pieces, in four blocks:
-  Shared (bore/boss geometry used by box + trim), Box-only, Trim-only,
-  Backpanel-only (this last one now covers both the wire-channel system
-  and the `ks_*` keystone-mount block). `box.scad`/`trim.scad`/
-  `backpanel.scad` all `include <params.scad>` (not `use`, since
-  `include` also pulls in plain variables, not just modules/functions).
+**Files in `archive/` no longer compile in place**: their
+`include <params.scad>` / `use <box.scad>` references resolve relative
+to their own directory, and those targets are at root (or archived under
+different assumptions). They're reference history, not live code. The
+print files (`box_print.scad` / `backpanel_print.scad`) and the
+`backpanel_section.scad` inspection slice went to archive with the
+originals — to restore any of them, copy to root and repoint their
+`use <>` at the root files (module and accessor names are unchanged, so
+that's the only edit needed; note `box-split-*.scad`/`backpanel-split-*.scad`
+now cover this same 3-piece-print need directly, so restoring these is
+only needed for the old 4-piece scheme). Their sectioning parameters
+(`box_cut_after_hole`, `panel_cuts`, `joint_pin_*`, `joint_funnel_*`)
+still live in `params.scad`, ready for that.
+
+## Files (live)
+
+- `params.scad` — every parameter, in blocks: Shared bore/boss geometry,
+  Box-only, Trim-only, Backpanel-only (wire-channel system + `ks_*`
+  keystone mount), Sectioning. Reached via `include` chain
+  (piece → common → params), so plain variables flow through.
   **When adding a parameter, put it here, in the right block — never
-  hardcode a value directly in one of the model files.**
-- `box.scad` — the arched hollow bar: concave-arc profile, extruded,
-  shelled hollow, with BMR cutouts on the arc face, an open back (no rear
-  wall) with a perimeter lip, M3 heat-set insert holes around that rim,
-  optional internal dividers, and mounting bosses on the arc-side facets.
-- `backpanel.scad` — flat cover for the box's open back: mounting holes
-  matching the box's M3 inserts (same `rect_pattern`/`rim_mid` derivation,
-  duplicated from `box.scad` since `include`/`use` won't share derived
-  geometry cleanly across files), the internal wire channels, and the
-  keystone jack housing (`keystone_cutout()` goes through the panel
-  itself, `keystone_housing()`/`keystone_body_cavity()` extend inward
-  from there). **Wire-channel design rule (hard requirement from the
-  user):** each of the 8 channels must be a single continuous,
-  junction-free lumen with only gentle tangent-continuous sweeps — a
-  Cat5e strand is push-threaded through, so no sharp elbows, no shared
-  segments, no bores that merge or converge at shallow angles. The
-  implementation is a cable-loom "bus": stacked parallel horizontal
-  bores from the riser outward, each peeling off at its chamber via a
-  `channel_bend_r` in-plane arc into a `channel_exit_r` arc that
-  surfaces through the inner face as an angled entry hole. Peel order
-  equals stack order (rank-by-distance: farther chambers ride lower),
-  left-of-riser chambers enter the riser from the opposite side and
-  reuse bus heights (stack of 6, not 8). The channels do **not** gather
-  into `keystone_body_cavity()` — that's the jack's own friction-fit
-  footprint, with no free space once the jack is inserted — but into
-  `channel_riser_bore()`/`channel_riser_housing()`, a separate tube
-  below the housing. An `assert()` at the bottom of the file checks
-  `ks_jack_len` (the keystone's total protrusion, measured from the
-  panel's own outer face) against the shallowest chamber's available
-  depth (`bar_depth - wall_width`, worst case at `x=0`) and fails the
-  render if it doesn't fit.
-- `backpanel_section.scad` — inspection-only half-section of
-  `backpanel.scad` (see above); `use`s it rather than duplicating it.
-- `box_print.scad` / `backpanel_print.scad` — print-ready segments for a
-  300mm printer (Creality K2 Pro): set `segment = 0..3`, export each.
-  They `use <>` the model files (so the model isn't instantiated twice)
-  and read derived values through small `box_*()`/`bp_*()` accessor
-  functions defined in the model files — `use` exports functions but
-  not top-level variables, so any new derived value a print file needs
-  gets an accessor, never a re-derivation. Cut positions live in
-  `params.scad` (`box_cut_after_hole` as "gap after hole N", with
-  divider-carrying gaps cutting at the divider face so that joint mates
-  against a full bulkhead; `panel_cuts` as literal x, staggered ≥~50mm
-  off the box cuts so the bolted panel bridges every box joint). Joint
-  features (filament-dowel holes; per-channel seam funnels in the
-  panel) are subtracted from the *full* model before slabbing, so
-  mating segments automatically get mirror halves. Box segments print
-  standing on their cut face (all walls vertical, no supports; end
-  segments stand on their closed end); the panel prints flat, outer
-  face down. Asserts verify every cut clears bores/inserts/bolt
-  holes/keystone zone and crosses channels only mid-bus.
-- `trim.scad` — a stepped cap that plugs into a BMR bore from outside and
-  clips onto the box's mounting bosses; flange is a rounded-rect hull of
-  the boss circles, bore has a chamfered entry (`trim_id_chamfer`).
-- `render.sh` — convenience wrapper: `openscad --render --imgsize=1000,1000
-  --autocenter --viewall -o out.png file.scad [-- extra args]`. Requires
-  `openscad` on `PATH`; in this dev environment it isn't (only
-  `C:\Program Files\OpenSCAD\openscad.com` exists), so use the full path
-  directly here rather than the script until that's resolved.
+  hardcode a value directly in a model file.**
+- `common.scad` — everything derived or shared: the arc solve
+  (`R`, `half_deg`, `Xe`, `Yc`, `Xi`, `d_in`), BMR hole layout
+  (`hole_t()`, `hole_x()`, pitch + overlap assert), `rect_pattern()`,
+  `boss_xy()`, `entry_bore()`. Derived values belong here the moment a
+  second file needs them.
+- `box.scad` — the arched hollow bar: concave-arc profile (with a "/-\"
+  rear -- flat across the center chamber, angled down to `rear_end_depth`
+  at each end), extruded, shelled hollow (faceted cavity, one flat facet
+  per hole), BMR cutouts and mounting bosses on the arc face, open back
+  with a seating lip (`back_lip()`), divider walls, M3 insert holes
+  (`box_rim_bolt_frame()`). Carries the `box_*()` accessors that
+  `box-split-*.scad` and `backpanel.scad` read via `use <>`.
+- `backpanel.scad` — cover for the box's open back, built flat in one
+  frame (bolt holes via `box_rim_bolt_frame()`, the through-panel
+  keystone jack mount, the wire channels) then cut into 3 pieces and the
+  two end pieces folded to match `box.scad`'s rear bend (`panel_piece()`,
+  `rotate_about_x()`). **Hard requirement:** each of the 8 channels must
+  be a single junction-free lumen with only gentle sweeps — a Cat5e
+  strand is push-threaded through, so no sharp elbows, no shared/merging
+  segments. Implementation is a cable-loom "bus": stacked bores from the
+  riser outward, each peeling off at its chamber via a `channel_bend_r`
+  arc into a `channel_exit_r` arc that surfaces as an angled entry hole.
+  Channels gather into `channel_riser_bore()` — **not**
+  `keystone_body_cavity()` (the jack's own friction-fit footprint, no
+  free space once inserted). Carries the `bp_*()` accessors for the
+  (archived) print file.
+- `trim.scad` — per-driver cap: rounded-rect flange (hull of the 4
+  boss circles), plug into the BMR bore, chamfered `trim_id` opening,
+  countersunk screw holes via `entry_bore()`.
+
+## Comment style
+
+Keep `.scad` comments short: 1-3 lines, WHY not WHAT. Don't restate what
+the next line obviously does, don't narrate history ("originally X, then
+we changed to Y"), don't write multi-paragraph derivations inline. If a
+design decision needs more than a few lines to explain, put the full
+version in this file (CLAUDE.md) and leave a one-line pointer in the
+code. This applies to all `.scad` files and to edits to this file too —
+prefer a tight bullet over a paragraph.
 
 ## Coordinate convention (box.scad)
 
@@ -157,93 +160,222 @@ wall behind the arc holes.
   stay flush or the additive feature will protrude past the surface it's
   supposed to be flush with. This is why `shell_cavity()` (flush) and
   `shell_cavity_cut()` (epsilon-extended) are separate modules.
-- The coincident-face risk isn't limited to subtraction: **unioning** an
-  added feature exactly flush against an existing solid's boundary (zero
-  gap, zero overlap) is the same problem and can make CGAL grind for a
-  very long time instead of erroring — much easier to miss than a bad
-  subtraction since the model can still look fine in F5 preview and even
-  render "successfully," just extremely slowly. Found twice so far: the
-  keystone `channel_riser_housing()` was placed at exact tangency to
-  `keystone_housing()`'s outer wall (fixed with a 0.1mm overlap), and
-  `back_lip()`'s outer cube was defined to land exactly on all 4
-  boundaries where the surrounding end-wall/cap-wall material begins —
-  worse than the riser case since it's 4 coincident planes at once
-  (fixed the same way, `eps = 0.1` pulling each outer face slightly into
-  the neighboring solid). If a render is unexpectedly slow (minutes, not
-  seconds) and nothing else has changed much, check newly-added
-  union'd geometry for exact-tangency placement before assuming it's just
-  inherent model complexity.
-- Two more shapes of the same disease, both found in the wire channels:
-  (1) **coaxial same-diameter cylinders** overlapping along a shared
-  axis (e.g. several channels routed through one transit line, or a
-  pair of vertical drops at the same x) — their lateral surfaces are
-  exactly coincident over the overlap, the curved-surface version of a
-  coincident face; (2) **tangent-continuous segments** (a straight bore
-  overlapping into an arc it's tangent to) — the overlap region is a
-  near-zero-thickness crescent. Fix for (1): give every bore its own
-  distinct axis, full stop. Fix for (2): don't overlap tangent segments
-  directly; pull each segment ~0.4mm short and bridge the joint with a
-  slightly fatter sphere, which both solids cross transversally.
-- A small overlap that's safe for flat-on-flat is NOT automatically safe
-  for curved-on-flat: a cylinder nudged 0.1mm into a flat face makes a
-  lens ~2.4mm wide tapering to knife-edges (worse than the tangency it
-  replaced). Curved-into-flat overlaps need to be ~1mm+ deep so the lens
-  is wide and thick (see `riser_overlap`).
-- While chasing the above: `stepped_cutter()` references `bmr_fn` (its
-  local `$fn` override for the BMR cutout resolution), but `bmr_fn` had
-  gone missing from `params.scad` entirely — OpenSCAD only warns
-  ("Ignoring unknown variable"), it doesn't error, so the file still
-  compiled and rendered, just with the BMR holes silently falling back to
-  the low global `$fn` instead of their intended higher resolution.
-  Re-added to `params.scad`. Worth a quick scan for other
-  warnings-not-errors like this after any manual edit to `params.scad`.
-- Building a stepped-diameter cutter as a union of distinct-radius
-  `cylinder()`s is fine and used deliberately (see `boss_hole_cutter()`
-  comment); but a union of two cylinders fed into `rotate_extrude()`
-  leaves an internal seam that can silently corrupt STL export even
-  though F5 preview looks fine — that's why `stepped_cutter()` uses one
-  continuous polygon revolved once, not two revolved unions.
+- Coincident faces aren't just a subtraction risk: **unioning** a feature
+  exactly flush (zero gap/overlap) against existing solid can make CGAL
+  grind for minutes instead of erroring, even though F5 preview looks
+  fine. Fix: `eps ~= 0.1` overlap into the neighbor. Seen in
+  `channel_riser_housing()` vs `keystone_housing()`, and `back_lip()`'s
+  outer cube (4 coincident planes at once). If a render goes
+  unexpectedly slow, check newly-added union'd geometry for tangency.
+- Same disease, curved version: (1) coaxial same-diameter cylinders
+  overlapping on a shared axis — give every bore its own axis; (2)
+  tangent-continuous segments (a bore overlapping an arc it's tangent
+  to) leave a near-zero-thickness crescent — pull each segment ~0.4mm
+  short and bridge with a slightly fatter sphere instead.
+- A safe flat-on-flat overlap is NOT safe curved-on-flat: a cylinder
+  nudged 0.1mm into a flat face makes a knife-edge lens. Curved-into-flat
+  needs ~1mm+ overlap (see `riser_overlap`).
+- OpenSCAD warns ("Ignoring unknown variable") but doesn't error on a
+  missing param — `bmr_fn` going missing from `params.scad` silently
+  dropped BMR holes to the low global `$fn` and still rendered. Scan for
+  warnings after any manual `params.scad` edit.
+- A union of two cylinders fed into `rotate_extrude()` leaves an internal
+  seam that can corrupt STL export even though preview looks fine —
+  `stepped_cutter()` uses one continuous polygon revolved once instead.
 - F5 preview can visually fail to show a cut correctly in a deeply
-  nested boolean tree (this file has several), even when the underlying
-  CSG is correct. If a hole/feature looks wrong, verify with F6 (render)
-  before assuming the geometry is broken.
-- `trim.scad`'s flange (`flange_outline()`) is a `hull()` of 4 circles
-  centered on the boss positions — a clean way to get a rounded-rect
-  shape whose corner radius is guaranteed to exactly match another
-  radius (here, `boss_od/2`) with no separate fillet parameter to keep
-  in sync. Reach for this pattern before adding a manual
-  rounded-rectangle polygon when the fillet needs to match existing
-  circular geometry.
-- The keystone mount in `backpanel.scad` is the first feature that
-  *adds* material proud of a face (`keystone_housing()` extending inward
-  past `panel_thick`) rather than being carved into the panel's own
-  volume — a different shape than everything else in this repo, which is
-  why it needs its own union of `panel_body()` + `keystone_housing()`
-  before the usual cutter union is subtracted. Worth remembering if
-  another external-standoff feature gets added: it has to join that
-  first union, not the cutter one.
-- When a feature needs to be reachable from a part's true exterior (a
-  jack, a button, anything a person or cable touches after final
-  assembly), trace the actual opening all the way through to that
-  exterior face before trusting the geometry — it's easy to build a
-  cavity that's internally consistent (tang catches correctly, cutter
-  merges cleanly, compiles with no errors) while still being completely
-  sealed off from the outside world. The first keystone mount did exactly
-  this: its only opening faced *further into* the box instead of out to
-  where a cable could ever reach it, and nothing in the geometry itself
-  (no errors, no failed asserts) signaled that.
+  nested boolean tree even when the CSG is correct — verify with F6
+  (render) before assuming geometry is broken.
+- `flange_outline()`'s `hull()` of 4 boss-centered circles is a clean way
+  to get a rounded-rect whose corner radius exactly matches another
+  radius (`boss_od/2`) with no separate fillet param to keep in sync.
+  Reach for this before a manual rounded-rectangle polygon.
+- Features that *add* material proud of a face (`keystone_housing()`)
+  need their own union with the base body, ahead of the usual cutter
+  union — don't fold them into the cutter side.
+- Trace a reachable-from-exterior feature (jack, button) all the way to
+  that exterior face before trusting the geometry — a cavity can be
+  internally consistent (no errors, no failed asserts) while still
+  sealed off from the outside. The first keystone mount opened *into*
+  the box instead of out to a cable.
+
+## Provenance (simplified rewrite, verified identical)
+
+The current `box`/`backpanel`/`trim`.scad files are a level-set rewrite
+of the original three piece files (now in `archive/`, along with an
+interim `smp-*.scad`-prefixed snapshot from before the prefix was
+dropped): `common.scad` absorbed everything that
+was duplicated or repeated (the arc solve and `rect_pattern` existed
+twice verbatim; the rim-bolt-point math twice; the boss-position
+expression 4x; the chamfered entry bore twice), and the piece files
+kept the same module structure minus the duplication, with
+`shell_cavity(rear_cut)` folding the old cavity/cavity_cut pair.
+**Verified geometrically identical to the archived originals** at the
+time of the swap (method below). Module and accessor names were kept
+identical, which is what makes restoring the archived print files a
+one-line repoint.
+
+## Simplification workflow (apply proactively, not retroactively)
+
+This is the process that produced the current files, kept here as a
+first-class practice so it's applied *as new features are designed*,
+not run as a one-time cleanup pass after several features have already
+stacked up duplicated logic.
+
+1. **Read every file end-to-end before touching anything.** Duplication
+   across files is invisible if you edit one file at a time from memory.
+2. **Find every derived value/shape a second file needs, and ask "is
+   this in the shared file yet?"** before writing it inline. The
+   original box/backpanel/trim had the arc solve, `rect_pattern`, the
+   rim-bolt-point math, the boss-position expression, and a chamfered
+   bore all duplicated — none of that was a design decision, it
+   accreted. **Rule: the moment a second file needs a derived value, it
+   moves to `common.scad` immediately**, not at the next refactor.
+3. **Prefer a generic geometric operation over a hand-derived one when
+   one exists** (this session's concrete example: `offset()` for a
+   profile inset, replacing a hand-maintained inner polygon — see the
+   dynamic-shell section below). A generic operation automatically
+   tracks upstream shape changes; a hand-derived one has to be
+   remembered and re-derived every time the upstream shape changes.
+4. **Keep module/function names stable across a rewrite.** Every
+   consumer (print files, section views) then needs only a `use <>`
+   repoint, not a rewrite, and old and new versions stay drop-in
+   comparable.
+5. **Verify equivalence before trusting a rewrite** — see the CSG-tree
+   diff method below. Don't rely on "it renders" or a visual check.
+6. **Archive, don't delete**, the pre-rewrite version until the new one
+   has actually been used for a while — it's the ground truth the
+   verification method compares against, and a fallback if the rewrite
+   has a subtle behavioral gap the verification didn't happen to check
+   (e.g. a `use <>` accessor an archived consumer needs that never got
+   ported — verification only proves the *rendered geometry* matches).
+
+The test for whether a new feature belongs in `common.scad` from
+day one: **"if I change this upstream value/shape, does anything
+downstream need to also change to stay correct?"** If yes, that
+downstream relationship should be expressed as a function/generic
+operation on the upstream value, not as a second hand-computed
+constant — see the dynamic-shell rework below for a worked example of
+converting an existing hand-synced relationship into one that isn't.
+
+## Verifying a refactor produces identical geometry
+
+Fast, near-proof method (seconds): export both versions' **CSG trees**
+(`openscad -o x.csg x.scad` — compile only, no mesh), normalize
+`group()` → `union()`, strip pure-wrapper lines (`union() {` / `}`),
+and diff. Zero differing primitive/transform lines = every cylinder,
+cube, polygon, and transform with all literal numbers is identical in
+content and order. Wrapper-only residue comes from implicit vs
+explicit unions and is geometrically meaningless (calibrated against a
+mesh-XOR-proven-identical pair).
+
+What NOT to do: (1) STL byte/hash comparison — identical solids
+tessellate differently when tree nesting differs; even vertex *sets*
+differ. (2) Mesh-level XOR via `import()` of both STLs — float
+roundtrip makes the meshes *almost* coincident, CGAL's worst case
+(asserts or grinds). (3) Full-scale CSG-level XOR
+(`difference(){A();B();}` via module-wrapped includes) — exact and
+definitive, and fine for small parts (proved the trim pair), but
+differencing two exactly-coincident copies of a large part takes
+30+ min in OpenSCAD 2021.01. The module-wrap trick itself is useful:
+`module A() { include <box.scad> }` scopes a whole file, and
+param overrides placed after the include apply to that scope
+(last-assignment-wins).
+
+**When the CSG-tree diff shows real differences (not just wrapper
+noise), it means the tree *structure* changed, not necessarily the
+*geometry*** (e.g. a `polygon()` replaced by `offset()`) — the CSG diff
+can't tell those apart, since it compares operations, not resulting
+shape. When that happens, scope a 2D or 3D XOR check to just the piece
+that changed (see below) instead of trying to CSG-diff the whole part.
+
+## Dynamic shell: cavity_2d() as offset() + hand-derived facets
+
+`box.scad`'s cavity boundary is two kinds of edge: the **arc side**
+is one hand-derived flat facet per hole (`facet_pts`/`facet_cap_2d()`,
+driven by hole positions, not a generic inset); the **rear+ends** are a
+genuine `offset(delta = -wall_width, chamfer = false)` of whatever
+`profile_2d()`'s lower portion is (`outer_cap_2d()`/`outer_cap_open_2d()`),
+so the cavity reacts automatically if that shape changes — no
+hand-written `[Xi,0]`/`[-Xi,0]` polygon to re-derive by hand. Worked
+example for principle #3 below. They meet at `cap_y`, a margin below
+the lowest facet point; the file's `assert` catches a future rear-end
+feature growing taller than `cap_y`.
+
+`offset()` gotchas: (1) it insets *every* edge, including the 3 rear
+segments, which must stay flush — fixed in `outer_cap_open_2d()` by
+unioning in a plain oversized rectangle hugging each segment's outward
+side (plus a small disc at each of the 2 true outer corners, where a
+rear segment meets the curved arc rather than another straight segment)
+before offsetting, so there's solid material well past every rear edge
+and offset() has nothing there to inset; re-intersect with the
+un-bloated shape afterward to discard the rectangles'/discs' spillover.
+(**Don't** mirror the whole shape across each segment's line instead —
+tried that first; it drags the far-away arc boundary along too, which
+isn't mirror-symmetric across a rear segment's line, and left an
+uncancelled wedge of material right at the two true outer corners that
+was invisible in coarse checks and only showed up as a real "solid
+plane over the back" once someone actually rendered and inspected the
+STL.) (2) clipping with a box *before* offsetting inward: the offset
+eats exactly `wall_width` off that clip edge too, so pad the clip box by
+at least `wall_width` past where the result needs to reach.
+
+`edge_deg` in `common.scad` takes the max of the original `end_space`
+margin and an exact chord-based margin that keeps the outermost hole's
+OD clear of the box ends, so hole layout auto-adjusts instead of
+silently overlapping the corner.
+
+(An earlier bottom/end-chamfer rear treatment — `end_profile_2d()` /
+`end_cavity_2d()`, offsetting in the (x,z) plane — was replaced by the
+current "/-\" rear shape, driven by `rear_segments` in `box.scad`
+directly off `profile_2d()`'s own (x,y) plane instead of needing a
+second axis's worth of offset machinery. See `angle-*.scad` in
+`archive/` for that design if it's ever needed again.)
 
 ## Rendering / verification
 
-`openscad.com` (the CLI variant) lives at
-`C:\Program Files\OpenSCAD\openscad.com`. A full STL export of `box.scad`
-is slow (arc profile + 10 stepped-cutter holes + bosses); when iterating,
-override params from the command line instead of editing the file, e.g.:
+**Default to not rendering at all.** Make the edit, stop. The user
+reviews visually in seconds; a `--render` + screenshot round trip costs
+minutes, and it's real money/time to burn on every edit by default. Only
+render/screenshot when the user explicitly asks to verify/check/render —
+and even then, run exactly one targeted check, not a battery of
+full-model + reduced-param + preview + zoomed + numeric-echo checks for
+the same fact. Don't iterate blindly on camera coordinates trying to
+frame a shot — if it's not right in one or two tries, say so and let the
+user look instead of continuing to guess.
+
+If there's real doubt a `.scad` file still parses after an edit, a
+compile-only pass is enough and is near-instant — no `--render`, no
+mesh:
 
 ```
-openscad.com -D "num_holes=2" -D "divider_after_hole=[]" --render -o test.stl box.scad
+openscad.com -o test.csg box.scad
 ```
 
-Unless asked to verify, prefer implementing the requested change directly
-and let the user render/check it themselves rather than running a full
-render loop.
+**Two OpenSCAD installs are on this machine — use the nightly one for
+any real render.** `C:\Program Files\OpenSCAD\openscad.com` is the old
+2021.01 stable: CGAL-only backend, exact rational arithmetic, and
+genuinely slow on this project (`box.scad`'s full render is 4-5+
+minutes — arc profile + 10 stepped-cutter holes + bosses + unions).
+`C:\Program Files\OpenSCAD (Nightly)\openscad.com` defaults to the
+**Manifold** backend (float-based, still watertight) and renders the
+exact same geometry in well under a second (measured: `box-split-1.scad`
+0.7s nightly vs. 4:44 stable). Use the nightly build's `openscad.com` for
+`--render`/STL export; fall back to the stable one only if the nightly
+build is ever missing. Override params from the command line rather than
+editing the file:
+
+```
+"C:\Program Files\OpenSCAD (Nightly)\openscad.com" -D "num_holes=2" --render -o test.stl box.scad
+```
+
+`scripts/render.sh` already does this detection automatically (nightly +
+`--backend Manifold`, falling back to whatever `openscad` resolves to on
+PATH with a warning) — prefer it over calling `openscad.com` directly for
+PNG renders.
+
+**If the nightly build is missing or stale**, get a current one from
+`https://files.openscad.org/snapshots/` (Windows: the `...-Installer.exe`
+file with the newest date) and install it — it installs side-by-side
+with the stable release, doesn't replace it, and nothing else here needs
+to change (same file paths, same flags). Manifold is its default backend
+already; no separate setup needed after install.

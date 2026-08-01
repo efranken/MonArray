@@ -6,7 +6,7 @@
 // Simplified rewrite of trim.scad -- identical output geometry.
 // ============================================================
 
-include <common.scad>
+include <smp-common.scad>
 
 // flange outline: hull of 4 circles on the boss positions -- straight
 // edges tangent to each boss, corner fillets exactly boss_od/2
