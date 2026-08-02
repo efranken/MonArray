@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
-# Render an OpenSCAD file to a PNG for quick visual inspection.
+# Render every root .scad file that has a matching STL in stl/ (the
+# box-split-*, backpanel-split-*, and trim pieces), overwriting each STL
+# in place. What's in stl/ is the source of truth for what gets
+# rendered -- add or remove a piece there to change what this covers.
+# Then renders all those STLs together, laid out in a grid, into
+# images/pieces.png -- the README pulls this in as the printable-pieces
+# overview.
 #
 # Usage:
-#   ./render.sh <file.scad> [output.png] [-- extra openscad args...]
-#
-# If output.png is omitted, it defaults to <file>.png next to the
-# input file. Any args after a literal "--" are passed through to
-# openscad as-is (e.g. -D "num_holes=2").
+#   ./render.sh [-- extra openscad args...]
 
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <file.scad> [output.png] [-- extra openscad args...]" >&2
-    exit 1
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+stl_dir="$repo_root/stl"
+
+if [[ $# -gt 0 && "$1" == "--" ]]; then
+    shift
 fi
 
 # Prefer the nightly build's Manifold backend -- 10-1000x faster than the
@@ -34,25 +39,60 @@ else
     exit 1
 fi
 
-scad_file="$1"
-shift
+shopt -s nullglob
+stl_files=("$stl_dir"/*.stl)
+shopt -u nullglob
 
-if [[ ! -f "$scad_file" ]]; then
-    echo "error: no such file: $scad_file" >&2
+if [[ ${#stl_files[@]} -eq 0 ]]; then
+    echo "error: no STLs found in $stl_dir" >&2
     exit 1
 fi
 
-out_file="${scad_file%.scad}.png"
-if [[ $# -gt 0 && "$1" != "--" ]]; then
-    out_file="$1"
-    shift
-fi
+rendered=0
+for stl_file in "${stl_files[@]}"; do
+    name="$(basename "$stl_file" .stl)"
+    scad_file="$repo_root/$name.scad"
+    if [[ ! -f "$scad_file" ]]; then
+        echo "warning: no matching $name.scad in repo root -- skipping $stl_file" >&2
+        continue
+    fi
+    echo "=== $name ==="
+    "$openscad_bin" --render "${backend_flag[@]}" -o "$stl_file" "$scad_file" "$@"
+    rendered=$((rendered + 1))
+done
 
-if [[ $# -gt 0 && "$1" == "--" ]]; then
-    shift
-fi
+echo "Rendered $rendered STL(s) into $stl_dir"
 
-"$openscad_bin" --render "${backend_flag[@]}" --imgsize=1000,1000 --autocenter --viewall \
-    -o "$out_file" "$scad_file" "$@"
+# ---------- Combined overview image ----------
+# Lays every STL out in a grid (translate only -- no rotation, so each
+# piece keeps whatever orientation it was exported in) and renders one
+# PNG of all of them together. Spacing (500mm) just needs to clear the
+# largest single piece (~320mm, the outer box segments) in every
+# direction; it doesn't need to track each piece's actual bounding box.
+images_dir="$repo_root/images"
+mkdir -p "$images_dir"
 
-echo "Rendered: $out_file"
+combo_scad="$(mktemp --suffix=.scad)"
+trap 'rm -f "$combo_scad"' EXIT
+
+cols=3
+spacing=500
+i=0
+for stl_file in "${stl_files[@]}"; do
+    col=$((i % cols))
+    row=$((i / cols))
+    # openscad.com is a native Windows binary: MSYS auto-translates POSIX
+    # paths passed as argv, but not ones embedded in a file it reads --
+    # cygpath converts this one before it goes into the import() string.
+    # -m (not -w) keeps forward slashes, which sidesteps backslash-escape
+    # parsing in the OpenSCAD string literal.
+    win_path="$(cygpath -m "$stl_file")"
+    printf 'translate([%d, %d, 0]) import("%s");\n' \
+        "$((col * spacing))" "$((-row * spacing))" "$win_path" >>"$combo_scad"
+    i=$((i + 1))
+done
+
+"$openscad_bin" --render "${backend_flag[@]}" --imgsize=2000,1500 --autocenter --viewall \
+    -o "$images_dir/pieces.png" "$combo_scad" "$@"
+
+echo "Rendered overview image: $images_dir/pieces.png"

@@ -39,7 +39,7 @@ bmr_fn             = 96;         // circle resolution for the BMR cutout only (g
 
 /* [Trim-only parameters] */
 trim_id          = 47;                  // center bore diameter, mm
-trim_id_chamfer  = 2;                   // chamfer depth on the center bore's inner edge, mm
+trim_id_chamfer  = 3;                   // chamfer depth on the center bore's inner edge, mm
 trim_step_od     = bmr_od - 0.5;        // plug OD: 0.5 mm total clearance in the bore
 trim_step_depth  = boss_h + 2;          // plug length: boss height + 2 mm
 boss_hole        = boss_hole_d;         // == boss_id: screw clearance hole diameter

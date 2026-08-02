@@ -57,11 +57,12 @@ archive/              retired originals: box/backpanel/trim.scad (the
                       verified identical against), box_print.scad,
                       backpanel_print.scad, backpanel_section.scad, plus a
                       later smp-*.scad snapshot (pre "/-\" rear shape)
-scripts/render.sh     PNG render wrapper (needs openscad on PATH; this
-                      machine doesn't have it on PATH, so call the nightly
-                      build's openscad.com directly instead -- see
-                      "Rendering / verification" below)
-stl/                  exported STLs (snapshots, not regenerated automatically)
+scripts/render.sh     re-renders every STL in stl/ from its matching root
+                      .scad file, overwriting in place (nightly + Manifold,
+                      same detection as "Rendering / verification" below)
+stl/                  exported STLs -- snapshots, not regenerated
+                      automatically; run scripts/render.sh after a change
+                      that affects geometry to bring them back in sync
 images/               renders embedded in README.md
 ```
 
@@ -370,8 +371,11 @@ editing the file:
 
 `scripts/render.sh` already does this detection automatically (nightly +
 `--backend Manifold`, falling back to whatever `openscad` resolves to on
-PATH with a warning) — prefer it over calling `openscad.com` directly for
-PNG renders.
+PATH with a warning) — prefer it over calling `openscad.com` directly when
+re-rendering the STLs in `stl/` after a geometry change; it re-renders
+every STL there from its matching root `.scad` file, overwriting in
+place. For a one-off PNG render instead, call `openscad.com --render
+--imgsize=... -o out.png file.scad` directly.
 
 **If the nightly build is missing or stale**, get a current one from
 `https://files.openscad.org/snapshots/` (Windows: the `...-Installer.exe`
