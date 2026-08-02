@@ -22,10 +22,11 @@ end_space    = 30;      // clearance: box end -> nearest hole edge (along arc), 
 height       = 70;      // extrusion height, mm
 wall_width   = 4;       // shell wall thickness, mm
 bar_depth    = 63;      // box depth at mid-span (thinnest point), mm
-rear_end_depth = 117.8;    // box depth (front-to-back) at the left/right ends, mm -- see profile_2d()
-                          // 117.78 makes the entire rear one flat plane (no "\_/" bend at all)
-                          // -- recompute if arc_length/arc_depth/bar_depth change
-num_holes    = 10;      // holes are spaced equidistantly to fill the span
+rear_end_depth = 117.8; // box depth (front-to-back) at the left/right ends, mm -- see profile_2d()
+                        // 117.78 makes the entire rear one flat plane (no "\_/" bend at all)
+                        // -- recompute if arc_length/arc_depth/bar_depth change
+
+num_holes          = 10;        // holes are spaced equidistantly to fill the span
 divider_after_hole = [4, 5, 6];  // 1-indexed: wall placed between this hole and the next
 divider_thickness  = wall_width; // thickness of each dividing wall, mm
 boss_hole_depth    = boss_h + 2; // blind: stops 2 mm short of the outer face
@@ -71,15 +72,16 @@ channel_mid_offset      = 10;    // inner channel pair position, mm from center
 // extends inward to the punch-down terminal. Standard 14.5x16.1mm
 // keystone opening (Leviton/Legrand/ICC-style) -- adjust to match a
 // specific jack's datasheet if needed.
-ks_cutout_w         = 20.5;  // standard keystone cutout width, mm
-ks_cutout_h         = 22.5;  // standard keystone cutout height, mm
+ks_body_w           = 20;    // body/tang-flare cavity width behind the wall, mm
+ks_body_h           = 22;    // body/tang-flare cavity height behind the wall, mm
 ks_cutout_clearance = 0.3;   // print clearance added to the cutout so the jack slides through, mm
-ks_body_w           = 16.3;  // body/tang-flare cavity width behind the wall, mm
-ks_body_h           = 14.8;  // body/tang-flare cavity height behind the wall, mm
+ks_cutout_w         = 14.8;  // standard keystone cutout width, mm
+ks_cutout_h         = 16.3;  // standard keystone cutout height, mm
+ks_cutout_y_offset  = 1.25;   // cutout height starts this far above the body cavity's bottom edge, mm
 ks_jack_len         = 36;    // overall length, panel's outer face to rear of punch-down block, mm
-ks_wall             = 6;     // structural wall thickness around the housing, mm
+ks_wall             = 3;     // structural wall thickness around the housing, mm
 ks_x_frac           = 1 / 3; // keystone housing (and channel gathering point) position along the panel length, fraction from the left edge
-ks_y_offset         = 0;     // housing center y, relative to mid-height (mm; change to reposition)
+ks_y_offset         = 10;    // housing center y, relative to mid-height (mm; change to reposition)
 
 /* [Sectioning for print (archive/box_print.scad / archive/backpanel_print.scad -- repoint at the smp files to reuse)] */
 // ~795mm parts cut into 4 segments for a 300mm-class printer. Box prints

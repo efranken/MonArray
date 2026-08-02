@@ -96,7 +96,8 @@ module keystone_housing() {
 module keystone_cutout() {
     cw = ks_cutout_w + ks_cutout_clearance;
     ch = ks_cutout_h + ks_cutout_clearance;
-    translate([ks_x - cw / 2, ks_y - ch / 2, -1])
+    body_bottom = ks_y - ks_body_h / 2;
+    translate([ks_x - cw / 2, body_bottom + ks_cutout_y_offset, -1])
         cube([cw, ch, panel_thick + 2]);
 }
 
