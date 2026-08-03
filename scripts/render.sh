@@ -66,17 +66,28 @@ echo "Rendered $rendered STL(s) into $stl_dir"
 # ---------- Combined overview image ----------
 # Lays every STL out in a grid (translate only -- no rotation, so each
 # piece keeps whatever orientation it was exported in) and renders one
-# PNG of all of them together. Spacing (500mm) just needs to clear the
+# PNG of all of them together. Spacing (350mm) just needs to clear the
 # largest single piece (~320mm, the outer box segments) in every
 # direction; it doesn't need to track each piece's actual bounding box.
+# cols=4 (not 3) keeps the 7-piece grid closer to square, which --viewall
+# then fills more tightly than a tall skinny 3-wide grid would.
 images_dir="$repo_root/images"
 mkdir -p "$images_dir"
 
 combo_scad="$(mktemp --suffix=.scad)"
 trap 'rm -f "$combo_scad"' EXIT
 
-cols=3
-spacing=500
+cols=4
+# Pieces aren't centered on their own local origin (e.g. a backpanel
+# segment can extend much further to one side of [0,0,0] than the
+# other), so a spacing just above the largest piece's ~320mm nominal
+# size (350, then 500) still let a wide piece reach into its neighbor's
+# cell -- seen as a box piece visually intersecting a backpanel piece.
+# Overspacing generously instead of computing each STL's real bounding
+# box; the outer-whitespace crop below means going bigger here costs
+# nothing.
+col_spacing=650
+row_spacing=650
 i=0
 for stl_file in "${stl_files[@]}"; do
     col=$((i % cols))
@@ -88,11 +99,18 @@ for stl_file in "${stl_files[@]}"; do
     # parsing in the OpenSCAD string literal.
     win_path="$(cygpath -m "$stl_file")"
     printf 'translate([%d, %d, 0]) import("%s");\n' \
-        "$((col * spacing))" "$((-row * spacing))" "$win_path" >>"$combo_scad"
+        "$((col * col_spacing))" "$((-row * row_spacing))" "$win_path" >>"$combo_scad"
     i=$((i + 1))
 done
 
-"$openscad_bin" --render "${backend_flag[@]}" --imgsize=2000,1500 --autocenter --viewall \
+"$openscad_bin" --render "${backend_flag[@]}" --imgsize=2000,1200 --autocenter --viewall \
     -o "$images_dir/pieces.png" "$combo_scad" "$@"
+
+# --viewall fits the render's bounding SPHERE to the image, not the actual
+# 2D silhouette -- a wide/flat grid of parts (like this one) ends up small
+# in the middle of a mostly-empty frame. Crop to content instead of fighting
+# camera math for a tight fit.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$script_dir/trim_png.ps1" \
+    -Path "$(cygpath -m "$images_dir/pieces.png")" -Margin 60
 
 echo "Rendered overview image: $images_dir/pieces.png"
