@@ -52,6 +52,20 @@ function rect_pattern(n, hw, hh) =
 // bosses/pilot holes and the trim's flange/clearance holes)
 function boss_xy(ang) = [boss_bc_d / 2 * sin(ang), boss_bc_d / 2 * cos(ang)];
 
+// ---------- box-split-*.scad joint key/valley ----------
+// A single rib spanning the box's full width (Y), parallel to the top and
+// bottom edges, in the box's own (X=length, Y=width, Z=vertical, bottom
+// edge at Z=0) frame -- i.e. arched_hole_bar()'s frame, before box-split's
+// own print-orientation transform. x0 is the cut-plane x; dir < 0 extends
+// the rib toward -x (into the segment on that side), dir > 0 toward +x.
+// depth/h are the rib's protrusion (key) or recess (valley, when
+// subtracted) and its Z extent -- see joint_* in params.scad.
+module joint_rib(x0, dir, depth, h) {
+    x_lo = dir < 0 ? x0 - depth : x0;
+    translate([x_lo, -height / 2, joint_z0])
+        cube([depth, height, h]);
+}
+
 // ---------- Shared cutter ----------
 // Chamfered entry bore: overhang cylinder (clean cut through the entry
 // face), 45-deg chamfer cone, then a straight bore. Local z = 0 at the

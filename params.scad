@@ -26,6 +26,16 @@ rear_end_depth = 117.8; // box depth (front-to-back) at the left/right ends, mm 
                         // 117.78 makes the entire rear one flat plane (no "\_/" bend at all)
                         // -- recompute if arc_length/arc_depth/bar_depth change
 
+// box-split-*.scad joint key/valley: locates the 3 printed segments during
+// glue-up. Ribs run the box's full width (Y), parallel to the top/bottom
+// edges, at joint_z0 above the box's own bottom edge (Z=0). Valley is
+// deeper/taller than the key so they don't bind on insertion.
+joint_z0              = 10;   // rib's Z position above the box's bottom edge, mm
+joint_key_protrusion  = 2;    // key: how far it pokes out from the cut face, mm
+joint_valley_depth    = 2.5;  // valley: how far it's recessed into the cut face, mm
+joint_key_height      = 4;    // key: Z extent, mm
+joint_valley_height   = 4.5;  // valley: Z extent, mm
+
 num_holes          = 10;        // holes are spaced equidistantly to fill the span
 divider_after_hole = [4, 5, 6];  // 1-indexed: wall placed between this hole and the next
 divider_thickness  = wall_width; // thickness of each dividing wall, mm

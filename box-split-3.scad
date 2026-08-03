@@ -29,11 +29,20 @@ for (c = [cut_left, cut_right], i = [0:num_holes - 1])
     assert(abs(c - box_hole_x(i)) > bmr_od / 2 + 2,
            str("Box cut at x=", c, " slices BMR bore ", i + 1));
 
-module box_segment(s) {
+module box_segment_solid(s) {
     intersection() {
         arched_hole_bar();
         translate([bounds[s], -height, -10])
             cube([bounds[s + 1] - bounds[s], 2 * height, bar_depth + rear_end_depth + 40]);
+    }
+}
+
+// Right piece: valley on its inner (left) face, at cut_right, mating with
+// the center piece's key.
+module box_segment(s) {
+    difference() {
+        box_segment_solid(s);
+        joint_rib(cut_right, 1, joint_valley_depth, joint_valley_height);
     }
 }
 
