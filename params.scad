@@ -60,7 +60,7 @@ total_depth      = flange_depth + trim_step_depth;  // overall trim height, mm
 panel_thick   = 5;    // backpanel thickness, mm
 bp_hole_od    = 6;    // counterbore diameter, mm
 bp_hole_depth = 3;    // counterbore depth, mm
-bp_hole_id    = 3.1;  // clearance-bore diameter through the rest of the panel, mm
+bp_hole_id    = 3.5;  // clearance-bore diameter through the rest of the panel, mm
 
 // wire channels: 8 push-threadable bores (one Cat5e conductor each, 2
 // per chamber), each a single junction-free lumen -- straight bus ->
