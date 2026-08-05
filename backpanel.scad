@@ -108,12 +108,11 @@ module keystone_body_cavity() {
 
 // ---------- Wire channels: cable-loom bus + gathering riser ----------
 // Push-threadable: each of the 8 channels is a junction-free lumen --
-// straight bus at its own height -> 90-deg in-plane peel arc at its
-// chamber -> surfacing arc through the inner face. Peel order matches
+// straight bus at its own height, then one straight funnel dive (equal
+// x/y/z reach, so a true 45 degrees both in-plane and through the panel
+// face) out to an oversized mouth at the chamber. Peel order matches
 // stack order so channels never cross; left-of-riser chambers enter from
 // the opposite side and reuse the top heights (stack of 6, not 8).
-// Tangent joints are bridged by spheres with segments pulled 0.4mm short
-// (direct tangent overlaps leave crescents that make CGAL grind).
 channel_x_groups = [-channel_edge_frac * Xe, -channel_mid_offset,
                      channel_mid_offset, channel_edge_frac * Xe];
 
@@ -140,33 +139,34 @@ function ch_slot(i) = ch_dir[i] == 1 ? ch_rank(i) : n_heights - n_left + ch_rank
 function transit_y(s) = riser_y - stack_height / 2 + channel_d / 2
                         + s * (channel_d + channel_gap);
 
+// x/y/z reach of the funnel dive: sized off panel_thick so the mouth
+// always actually clears the inner face (not a free-standing tunable --
+// see channel_face_overshoot in params.scad).
+channel_run = panel_thick / 2 + channel_face_overshoot;
+
 module channel(x_term, dir, t) {
-    zc  = panel_thick / 2;
-    x0  = x_term - dir * channel_bend_r;      // bus end / peel arc start
-    tip = riser_x + dir * 3;                  // stops 3mm short of riser center
-    jg  = 0.4;                                // pull-back at sphere joints
-    ja_bend    = jg / channel_bend_r * 180 / PI;
-    ja_exit    = jg / channel_exit_r * 180 / PI;
-    theta_face = acos(1 - zc / channel_exit_r);
-    // bus horizontal
-    hx0 = min(tip, x0 - dir * jg);
-    hx1 = max(tip, x0 - dir * jg);
+    zc = panel_thick / 2;
+    x0 = x_term - dir * channel_run;   // bus end / funnel start
+    tip = riser_x + dir * 3;           // stops 3mm short of riser center
+    ov = 0.4;                          // bus pull-back, bridged by the funnel's start sphere
+    hx0 = min(tip, x0 - dir * ov);
+    hx1 = max(tip, x0 - dir * ov);
+    // bus: straight run at this wire's stacked height, out to channel_run
+    // short of the chamber -- this is the part that threads perfectly
     translate([hx0, t, zc])
         rotate([0, 90, 0])
             cylinder(h = hx1 - hx0, d = channel_d);
-    translate([x0, t, zc]) sphere(d = channel_d + 0.4);
-    // peel arc: horizontal -> vertical, in-plane
-    translate([x0, t + channel_bend_r, zc])
-        rotate([0, 0, (dir > 0 ? 270 : 180) + ja_bend])
-            rotate_extrude(angle = 90 - 2 * ja_bend, convexity = 2)
-                translate([channel_bend_r, 0]) circle(d = channel_d);
-    translate([x_term, t + channel_bend_r, zc]) sphere(d = channel_d + 0.4);
-    // surfacing arc: vertical -> out through the inner face (+15 deg overhang)
-    translate([x_term, t + channel_bend_r, zc + channel_exit_r])
-        rotate([0, 90, 0])
-            rotate([0, 0, ja_exit])
-                rotate_extrude(angle = theta_face + 15 - ja_exit, convexity = 2)
-                    translate([channel_exit_r, 0]) circle(d = channel_d);
+    // funnel: one straight taper from the bus's ID to a
+    // channel_funnel_mult-times-wider mouth, channel_face_overshoot past
+    // the inner face. hull() of two spheres is inherently a clean convex
+    // taper (no tangent-joint crescents to worry about, unlike the arcs
+    // this replaced).
+    hull() {
+        translate([x0, t, zc])
+            sphere(d = channel_d);
+        translate([x_term, t + channel_run, zc + channel_run])
+            sphere(d = channel_d * channel_funnel_mult);
+    }
 }
 
 module wire_channels() {
@@ -193,24 +193,23 @@ assert(riser_y - riser_od / 2 > wall_width + back_lip_width,
 assert(n_left <= n_heights - 1 && n_left <= n_right,
        "Bus height reuse assumes the left side has no more channels than the right");
 for (i = [0:len(ch_x) - 1]) {
-    w = ch_dir[i] == 1 ? [ch_x[i] - channel_bend_r, ch_x[i]]
-                       : [ch_x[i], ch_x[i] + channel_bend_r];
+    w = ch_dir[i] == 1 ? [ch_x[i] - channel_run, ch_x[i]]
+                       : [ch_x[i], ch_x[i] + channel_run];
     assert(w[1] < ks_x - (ks_cutout_w + ks_cutout_clearance) / 2 - 1
            || w[0] > ks_x + (ks_cutout_w + ks_cutout_clearance) / 2 + 1,
            str("Channel at x=", ch_x[i], " peels off inside the keystone cutout"));
     assert(abs(ch_x[i]) < Xi - back_lip_width - channel_d,
            str("Channel entry at x=", ch_x[i], " lands outside the back-lip window"));
 }
-assert(transit_y(n_heights - 1) + channel_bend_r
-       + channel_exit_r * sin(acos(1 - (panel_thick / 2) / channel_exit_r))
+assert(transit_y(n_heights - 1) + channel_run
        < height - (wall_width + back_lip_width),
        "Top channel entry hole lands outside the back-lip window");
 // the flat-assembly extension for folding must not eat into channel/
 // keystone territory -- it shouldn't, since extra_left/right are only
 // ever needed near the very tips, but confirm rather than assume
-assert(-Xe - extra_left < channel_x_groups[0] - channel_bend_r,
+assert(-Xe - extra_left < channel_x_groups[0] - channel_run,
        "Left flat-assembly extension overlaps the outer channel pair");
-assert(Xe + extra_right > channel_x_groups[3] + channel_bend_r,
+assert(Xe + extra_right > channel_x_groups[3] + channel_run,
        "Right flat-assembly extension doesn't clear the outer channel pair");
 
 // ---------- Accessors for backpanel_print.scad ----------
@@ -218,11 +217,11 @@ function bp_Xe() = Xe;
 function bp_n_channels() = len(ch_x);
 function bp_channel_y(i) = transit_y(ch_slot(i));
 function bp_channel_span(i) = ch_dir[i] == 1
-    ? [riser_x + 3, ch_x[i] - channel_bend_r]
-    : [ch_x[i] + channel_bend_r, riser_x - 3];
+    ? [riser_x + 3, ch_x[i] - channel_run]
+    : [ch_x[i] + channel_run, riser_x - 3];
 function bp_channel_window(i) = ch_dir[i] == 1
-    ? [ch_x[i] - channel_bend_r, ch_x[i]]
-    : [ch_x[i], ch_x[i] + channel_bend_r];
+    ? [ch_x[i] - channel_run, ch_x[i]]
+    : [ch_x[i], ch_x[i] + channel_run];
 function bp_keystone_x() = ks_x;
 function bp_keystone_halfw() = max(ks_outer_w, riser_od) / 2;
 

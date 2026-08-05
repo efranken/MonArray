@@ -63,17 +63,22 @@ bp_hole_depth = 3;    // counterbore depth, mm
 bp_hole_id    = 3.5;  // clearance-bore diameter through the rest of the panel, mm
 
 // wire channels: 8 push-threadable bores (one Cat5e conductor each, 2
-// per chamber), each a single junction-free lumen -- straight bus ->
-// in-plane peel arc -> surfacing arc through the panel face. Left/right
-// chambers enter the riser from opposite sides and reuse bus heights,
-// so the stack is 6 tall, not 8.
+// per chamber), each a single junction-free lumen -- straight bus, then
+// one straight funnel dive (equal x/y/z reach -- a true 45 degrees in
+// both the in-plane peel direction and through the panel face) out to
+// an oversized mouth at the panel's inner face. Left/right chambers
+// enter the riser from opposite sides and reuse bus heights, so the
+// stack is 6 tall, not 8. A prior two-arc (peel + surfacing) design was
+// unpushable: no straight lead-in between them (compound bend, curvature
+// plane flips) and thin-wall internal overhangs at the tangent joints
+// print rougher than modeled -- see CLAUDE.md.
 channel_d               = 1.5;   // wire channel diameter, mm (~0.5mm clearance over a ~1.0mm insulated Cat5e conductor)
 channel_gap             = 0.5;   // minimum gap between stacked channels, mm
 channel_manifold_margin = 0.5;   // clearance added around the bus stack's height when sizing the riser bore, mm
 channel_riser_wall      = 1.5;   // wall thickness around the riser bore, mm
 channel_pair_dx         = 5;     // x offset between a chamber's 2 entry holes, mm
-channel_bend_r          = 10;    // radius of the in-plane peel-off arc (horizontal -> vertical), mm
-channel_exit_r          = 8;     // radius of the surfacing arc through the inner face, mm
+channel_funnel_mult     = 2.5;   // funnel mouth diameter, as a multiple of channel_d
+channel_face_overshoot  = 1.5;   // funnel mouth extends this far past the inner face, mm (clean subtraction, easier entry)
 channel_edge_frac       = 7 / 8; // outer channel pair position, fraction of the half-length (from center toward each edge)
 channel_mid_offset      = 10;    // inner channel pair position, mm from center
 
